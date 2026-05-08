@@ -7,6 +7,8 @@
 - **SeleniumBase UC 模式**：使用 Undetected Chrome 绕过 Cloudflare 检测
 - **WARP 代理**：WARP IP 是 Cloudflare 信任的，Turnstile challenge 会降级为自动通过
 - **Discord Token 登录**：注入 token 到 localStorage，自动完成 OAuth 流程
+- **绕过广告拦截检测**：页面会检测广告拦截器并禁用赚币按钮，脚本自动绕过
+- **点击 Start AFK 按钮**：页面需要手动点击 "Start AFK Session" 按钮才会建立 WebSocket 连接开始赚币
 - **浏览器保持挂机**：页面 JS 自动处理 WebSocket 连接和挑战响应，每 60 秒获得 1 币
 
 ## 赚币速度
@@ -98,14 +100,18 @@ DISCORD_TOKEN = "your_discord_token_here"
 2. 点击 Discord 登录 → 注入 token → 自动 OAuth 回调
 3. 进入 /earn 页面
 4. 等待 Turnstile 验证通过（WARP IP + UC 模式自动通过）
-5. 保持页面 20 分钟，页面 JS 自动赚币
-6. Session 结束 → 刷新页面 → 重新过 Turnstile → 下一轮
-7. 循环直到达到最大运行时长
+5. 绕过广告拦截检测 → 点击 Start AFK Session 按钮
+6. WebSocket 连接建立 → 页面自动赚币
+7. 保持页面 20 分钟（每 60 秒 +1 币）
+8. Session 结束 → 刷新页面 → 重新过 Turnstile → 下一轮
+9. 循环直到达到最大运行时长
 ```
 
 ## 注意事项
 
-- **不要处理 Funding Choices 弹窗**：点击或删除弹窗反而会干扰 Turnstile 渲染
+- **必须点击 Start AFK 按钮**：页面不会自动开始赚币，需要点击 "Start AFK Session" 按钮才会建立 WebSocket
+- **绕过广告拦截检测**：页面检测到广告拦截会禁用按钮，脚本自动注入 `adblockerDetected = false` 绕过
+- **不要手动关闭 Funding Choices 弹窗**：点击或删除弹窗会干扰 Turnstile 渲染
 - **必须 headed 模式**：Turnstile 在 headless 模式下不工作
 - **Linux 服务器需要 Xvfb**：脚本自动启动虚拟显示器
 - **WARP 推荐用代理模式**：避免全局代理影响其他服务
