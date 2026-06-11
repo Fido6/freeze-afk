@@ -176,24 +176,28 @@ def click_start_afk(sb):
             w = size.get('width', 100)
             h = size.get('height', 40)
             
-            # 1. Move from outside (right/bottom) onto the button
-            log("Moving mouse from outside onto the button...")
-            actions.move_to_element_with_offset(element, int(w * 1.2), int(h * 1.5))
-            actions.pause(0.5)
+            # 模拟人类在页面和按钮周围进行无规则移动
+            log("Simulating random human-like mouse movements...")
+            # 随机移动 4 到 7 次
+            for i in range(random.randint(4, 7)):
+                # 在按钮周围产生较大的随机偏移量（代表在页面其他部位闲逛）
+                rx = random.randint(-400, 400)
+                ry = random.randint(-300, 300)
+                actions.move_to_element_with_offset(element, rx, ry)
+                actions.pause(random.uniform(0.15, 0.4))
+                
+            # 移到按钮上，但稍稍偏离中心
+            log("Moving mouse onto the button with minor offset...")
+            btn_rx = random.randint(-int(w * 0.3), int(w * 0.3))
+            btn_ry = random.randint(-int(h * 0.3), int(h * 0.3))
+            actions.move_to_element_with_offset(element, btn_rx, btn_ry)
+            actions.pause(random.uniform(0.3, 0.6))
+            
+            # 精准对齐按钮中心并短暂停顿
             actions.move_to_element(element)
-            actions.pause(0.5)
+            actions.pause(random.uniform(0.6, 1.2))
             
-            # 2. Move away (left/top)
-            log("Moving mouse away from the button...")
-            actions.move_to_element_with_offset(element, -int(w * 1.2), -int(h * 1.5))
-            actions.pause(0.5)
-            
-            # 3. Move back onto the button
-            log("Moving mouse back onto the button...")
-            actions.move_to_element(element)
-            actions.pause(1.0) # wait 1s
-            
-            # 4. Hold down and wait for it to disappear or raise "element not interactable"
+            # 4. 按住按钮
             log("Holding Start AFK button...")
             actions.click_and_hold(element).perform()
             
