@@ -18,6 +18,7 @@ import sys
 
 from seleniumbase import SB
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
 
 # Discord Token - 从环境变量读取，支持多个（逗号分隔）
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN", "")
@@ -39,8 +40,6 @@ LOG_FILE = os.environ.get("LOG_FILE", "")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-
-screenshot_end_path = "screenshots/earn_page_end.png"
 screenshot_start_path = "screenshots/earn_page_start.png"
 
 def log(msg):
@@ -155,7 +154,8 @@ def login_via_discord_token(sb, token):
     return url.startswith("https://free.freezehost.pro")
 
 
-def click_start_afk(sb):
+def adblocker(sb):
+    """Bypassing adblocker"""
     log("Bypassing adblocker...")
     try:
         sb.execute_script("""
@@ -166,27 +166,58 @@ def click_start_afk(sb):
     except:
         pass
 
+
+def click_start_afk(sb):
+    adblocker(sb)
     for attempt in range(3):
         try:
             sb.wait_for_element_visible("#afk-action-trigger", timeout=5)
             element = sb.find_element("#afk-action-trigger")
             
             # Scroll element to the center of the viewport to prevent out-of-bounds errors
-            # sb.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-            # time.sleep(1)
+            sb.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
             
             actions = ActionChains(sb.driver)
             size = element.size
             w = size.get('width', 100)
             h = size.get('height', 40)
             
+            # 计算视口相对边界以防止鼠标移动超出页面范围
+            try:
+                rect = sb.execute_script("return arguments[0].getBoundingClientRect();", element)
+                viewport_w = sb.execute_script("return window.innerWidth || document.documentElement.clientWidth;")
+                viewport_h = sb.execute_script("return window.innerHeight || document.documentElement.clientHeight;")
+                cx = rect['left'] + rect['width'] / 2
+                cy = rect['top'] + rect['height'] / 2
+                
+                margin = 20
+                min_rx = int(margin - cx)
+                max_rx = int(viewport_w - margin - cx)
+                min_ry = int(margin - cy)
+                max_ry = int(viewport_h - margin - cy)
+                
+                low_rx = max(min_rx, -400)
+                high_rx = min(max_rx, 400)
+                low_ry = max(min_ry, -300)
+                high_ry = min(max_ry, 300)
+                
+                if low_rx > high_rx:
+                    low_rx, high_rx = high_rx, low_rx
+                if low_ry > high_ry:
+                    low_ry, high_ry = high_ry, low_ry
+            except Exception as e:
+                log("Failed to calculate precise bounds: %s" % e)
+                low_rx, high_rx = -100, 100
+                low_ry, high_ry = -100, 100
+
             # 模拟人类在页面和按钮周围进行无规则移动
             log("Simulating random human-like mouse movements...")
             # 随机移动 4 到 7 次
             for i in range(random.randint(4, 7)):
                 # 在按钮周围产生较大的随机偏移量（代表在页面其他部位闲逛）
-                rx = random.randint(-400, 400)
-                ry = random.randint(-300, 300)
+                rx = random.randint(low_rx, high_rx)
+                ry = random.randint(low_ry, high_ry)
                 actions.move_to_element_with_offset(element, rx, ry)
                 actions.pause(random.uniform(0.15, 0.4))
                 
@@ -304,63 +335,41 @@ def send_tg_message(start_time):
         return
 
     end_time = time.strftime("%Y-%m-%d %H:%M:%S")
-    start_pic = "screenshots/earn_start.png"
-    end_pic = "screenshots/earn_end.png"
 
     try:
         import requests
         import json
-        tg_msg = f"[FreezeHost] AFK finished!\nStart Time: {start_time}\nEnd Time: {end_time}\n"
-        
-        media = []
-        files = {}
-        
-        if os.path.exists(start_pic):
-            media.append({
-                "type": "photo",
-                "media": "attach://start_pic",
-                "caption": tg_msg
-            })
-            files["start_pic"] = open(start_pic, "rb")
-            
-        if os.path.exists(end_pic):
-            caption = tg_msg if not media else None
-            media.append({
-                "type": "photo",
-                "media": "attach://end_pic",
-                **({"caption": caption} if caption else {})
-            })
-            files["end_pic"] = open(end_pic, "rb")
-
-        if media:
-            r = requests.post(
-                "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMediaGroup",
-                data={"chat_id": TELEGRAM_CHAT_ID, "media": json.dumps(media)},
-                files=files
-            )
-            for f in files.values():
-                f.close()
-        else:
-            requests.post(
-                "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage",
-                data={"chat_id": TELEGRAM_CHAT_ID, "text": tg_msg}
-            )
+        tg_msg = f"""[FreezeHost] AFK finished!
+        Start Time: {start_time}
+        End Time: {end_time}
+        Coins Start: {coins_start}
+        Coins End: {coins_end}
+        """
+    
+        requests.post(
+            "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage",
+            data={"chat_id": TELEGRAM_CHAT_ID, "text": tg_msg}
+        )
     except Exception as e:
         log("Failed to send telegram message: %s" % str(e))
 
+def get_coins(sb):
+    """获取硬币数"""
+    selector = "div.text-right > div.flex > span:last-child"
+    sb.wait_for_element(selector, timeout=60)
+    try:
+        coins = sb.find_element(By.CSS_SELECTOR, selector).text
+        return coins
+    except Exception as e:
+        log("Failed to get coins: %s" % str(e))
+        return None
 
 def main():
     global global_start
+    global coins_start
+    global coins_end
 
     start_time = time.strftime("%Y-%m-%d %H:%M:%S")
-
-    # 清除旧的截图以防发送过期的图片
-    for f_path in ["screenshots/earn_start.png", "screenshots/earn_end.png"]:
-        if os.path.exists(f_path):
-            try:
-                os.remove(f_path)
-            except:
-                pass
 
     if not DISCORD_TOKEN:
         print("ERROR: DISCORD_TOKEN not set!")
@@ -395,15 +404,11 @@ def main():
             log("Login failed!")
             return
         log("Login OK!")
+        # 等待页面刷新
+        time.sleep(5)
 
-        # 挂机成功开始后，保存开始截图
-        start_pic = "screenshots/earn_start.png"
-        try:
-            os.makedirs("screenshots", exist_ok=True)
-            sb.save_screenshot(start_pic, selector="body")
-            log("Start screenshot saved to %s" % start_pic)
-        except Exception as e:
-            log("Failed to save start screenshot: %s" % str(e))
+        coins_start = get_coins(sb)
+        log("Coins Start: %s" % coins_start)
 
         session = 0
         while True:
@@ -424,15 +429,9 @@ def main():
             time.sleep(5)
 
         # 循环结束，在关闭浏览器前刷新页面并截取结束图
-        end_pic = "screenshots/earn_end.png"
-        try:
-            log("Refreshing and saving end screenshot...")
-            sb.refresh()
-            time.sleep(5)
-            sb.save_screenshot(end_pic, selector="body")
-            log("End screenshot saved to %s" % end_pic)
-        except Exception as e:
-            log("Failed to save end screenshot: %s" % str(e))
+        sb.refresh()
+        coins_end = get_coins(sb)
+        log("Coins End: %s" % coins_end)
         
     send_tg_message(start_time)
     log("Done!")
