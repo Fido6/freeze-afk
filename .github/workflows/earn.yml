@@ -52,16 +52,16 @@ jobs:
             exit 1
           fi
 
-          echo "Verifying proxy connection..."
-          for i in {1..10}; do
-            if curl -s --proxy socks5://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace > /dev/null; then
-              echo "Proxy is working!"
-              curl --proxy socks5://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace
-              break
-            fi
-            echo "Waiting for proxy to respond..."
-            sleep 2
-          done
+          # echo "Verifying proxy connection..."
+          # for i in {1..10}; do
+          #   if curl -s --proxy socks5://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace > /dev/null; then
+          #     echo "Proxy is working!"
+          #     curl --proxy socks5://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace
+          #     break
+          #   fi
+          #   echo "Waiting for proxy to respond..."
+          #   sleep 2
+          # done
 
       - name: Install dependencies
         run: |
@@ -72,7 +72,7 @@ jobs:
       - name: Run AFK Earn
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-          WARP_PROXY: "socks5://127.0.0.1:40000"
+          # WARP_PROXY: "socks5://127.0.0.1:40000"
           MAX_RUNTIME: ${{ github.event.inputs.duration || '300' }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
