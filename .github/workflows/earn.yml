@@ -23,34 +23,34 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install and Start sing-box
-        env:
-          SING_BOX_CONFIG: ${{ secrets.SING_BOX_CONFIG }}
-        run: |
-          echo "Downloading sing-box..."
-          curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.9.3/sing-box-1.9.3-linux-amd64.tar.gz
-          tar -xzf sing-box.tar.gz
-          sudo mv sing-box-1.9.3-linux-amd64/sing-box /usr/local/bin/
-          rm -rf sing-box.tar.gz sing-box-1.9.3-linux-amd64
+      # - name: Install and Start sing-box
+      #   env:
+      #     SING_BOX_CONFIG: ${{ secrets.SING_BOX_CONFIG }}
+      #   run: |
+      #     echo "Downloading sing-box..."
+      #     curl -Lo sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.9.3/sing-box-1.9.3-linux-amd64.tar.gz
+      #     tar -xzf sing-box.tar.gz
+      #     sudo mv sing-box-1.9.3-linux-amd64/sing-box /usr/local/bin/
+      #     rm -rf sing-box.tar.gz sing-box-1.9.3-linux-amd64
 
-          mkdir -p ~/.config/sing-box
-          if [ -z "$SING_BOX_CONFIG" ]; then
-            echo "ERROR: Please set the SING_BOX_CONFIG secret in your repository settings."
-            exit 1
-          fi
-          echo "$SING_BOX_CONFIG" > ~/.config/sing-box/config.json
+      #     mkdir -p ~/.config/sing-box
+      #     if [ -z "$SING_BOX_CONFIG" ]; then
+      #       echo "ERROR: Please set the SING_BOX_CONFIG secret in your repository settings."
+      #       exit 1
+      #     fi
+      #     echo "$SING_BOX_CONFIG" > ~/.config/sing-box/config.json
 
-          echo "Starting sing-box in background..."
-          sudo sing-box run -c ~/.config/sing-box/config.json > sing-box.log 2>&1 &
+      #     echo "Starting sing-box in background..."
+      #     sudo sing-box run -c ~/.config/sing-box/config.json > sing-box.log 2>&1 &
           
-          sleep 3
-          if pgrep -x "sing-box" > /dev/null; then
-            echo "sing-box started successfully!"
-          else
-            echo "sing-box failed to start! Log content:"
-            cat sing-box.log
-            exit 1
-          fi
+      #     sleep 3
+      #     if pgrep -x "sing-box" > /dev/null; then
+      #       echo "sing-box started successfully!"
+      #     else
+      #       echo "sing-box failed to start! Log content:"
+      #       cat sing-box.log
+      #       exit 1
+      #     fi
 
           # echo "Verifying proxy connection..."
           # for i in {1..10}; do
